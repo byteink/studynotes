@@ -1,0 +1,77 @@
+数据是多版本的，每个版本以提交时间作为时间戳
+旧版本的数据由GC管理，应用可以读取旧时间戳的数据
+
+应用可以指定哪个数据中心包含哪些数据，数据距离用户有多远（控制读延迟），
+副本间彼此有多远（控制写延迟），有多少个副本
+
+提供了读和写操作的外部一致性，以及在一个时间戳下全局的读一致性
+使得其支持一致性的备份、一致性的MapReduce操作和原子性的schema更新
+
+之所以支持这些特性是因为Spanner可以为事务分配全局意义的提交时间戳，即使事务可能是分布式的。
+如果一个事务T1在T2之前提交，那么T1的时间戳比T2的小
+
+
+Zone是管理部署的基本单元，Zone的集合也是数据复制位置的集合
+Zone也是物理隔离的单元。一个数据中心有一个或多个zones
+
+每个zone有一个zonemaster、一百到几千个spanservers
+zonemaster把数据分配给spanserver，spanservr接受客户的数据访问请求
+客户端使用每个分区的localtion proxy来定位spanserver
+universe master和placement driver都是单例
+universe master是一个控制台，显示所有zone的状态信息
+placement driver负责跨zone间的数据迁移，以分钟为时间尺度
+placement driver周期性地跟spanserver通信，找到需要迁移的数据，或者跟进副本约束条件的变更、均衡负载
+
+
+每个spanserver负责管理100到1000个tablet，实现了一系列如下的映射：
+(key:string, timestamp:int64) -> string
+Spanner会分配timestamp给数据
+
+一个tablet的状态存储在类似B树的文件集合和一个WAL（预写日志）中，
+所有这些都存储到google的分布式文件系统Colossus中
+为了支持复制，每个spanserver在每个tablet上都有一个Paxos状态机
+每个状态机在对应的talet中存储它的metadata和log
+我们的Paxos实现以基于时间的leader lease租约方式支持长寿命的leader，默认是10s
+当前的Spanner实现中对于每个Paxos写操作会记录两次日志：一次是tablet的日志，一次是Paxos的日志
+我们的Paxos实现是pipelined的，可以改善广域网的延迟，但是写操作在Paxos中按序执行
+写操作必须从leader发起，读操作可以从任何副本发起只要副本足够新。副本的集合称为一个Paxos group。
+
+对于每个角色为leader的副本，每个spanserver实现了一个lock table来实现并发控制。
+lock table包含了两阶段锁的状态：它负责映射key的range到锁的状态
+拥有一个长寿命的Paxos leader对于管理lock table是很关键的。
+需要同步的操作比如事务性的读，需要获取lock table里的锁，其他操作则不用经过lock table。
+
+在每个角色为leader的副本上，每个spanserver也实现了一个transaction manager来支持分布式事务。
+这个事务管理器用来实现一个participant leader,组内其他副本被视作participant slaves。
+如果一个事务只涉及一个Paxos group可以绕过事务管理器，因为lock table和Paxos一起提供了事务性
+如果一个事务涉及一个以上的Paxos group，这些groups的leader协调来执行两阶段提交
+其中的一个participant group被选择为coordinator协调者，
+这个组的participant leader被视作coordinator leader，这个组的从被视作participant slaves
+每个事务管理器的状态存储到底层的Paxos group中，因此是会被复制的
+
+
+
+在一系列的KV映射之上，Spanner实现了类似桶抽象的机制叫做目录directory，它是一组包含相同前缀的连续key
+目录的支持允许应用通过选择合适的keys来控制数据的局部性
+目录是数据放置的基本单元，同一个目录的数据具有相同的副本配置。
+当数据在Paxos组间迁移时，会按照一个一个目录地迁移
+Spanner可能把一个目录从某个组内移出来减少负载压力，也可能把经常一起访问的目录放到一个组内，
+也可能把一个目录移到离访问者近的组内。
+目录可以在客户端操作的同时进行移动操作。一个50M的目录预期可以在几秒内迁移完成。
+Spanner不要求一个tablet内是按字典顺序连续的行空间分区，而是可能会包括多个行空间的分区。
+这样可以实现把经常一起访问的目前放在一起。
+
+Movedir是一个后台任务用来进行组间目录迁移。
+Movedir没有实现成一个单独的事务，以避免阻塞正在进行的读写。
+Movedir在后台迁移数据，当它差不多迁移完指定量的数据后，
+会使用事务来原子性地迁移剩下的数据和更新两个组的metadata
+
+目录也是应用配置地理复制熟悉的最小单元。
+管理者需要控制两个维度： 副本的数量和类型；这些副本的地理放置属性
+当一个目录变得太大时，会分成多个分片，放置在不同的组内。
+因为组间迁移的实际上是分片，不是整个目录
+
+一个潜在的leader发送租约投票请求，当收到大多数的投票后，leader会知道它持有了租约
+当成功完成一次写操作后，副本会延迟自己的租约；当租约快到期时，leader会发起租约请求
+一个leader的租约区间的起始于它发现自己得到了大多数的租约投票，结束于不再拥有大多数的租约投票（有的已经过期）
+对于每个Paxos组，每个leader的租约区间和其他leader的都是不相交的。

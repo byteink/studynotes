@@ -47,9 +47,7 @@ buffer-emptying操作可以在线性次I/O操作内完成
 内部结点的buffer-emptying处理保持不变性：
 如果一个leaf nodes的buffer满了，那么它到root这条路径上的结点的buffer都是空的
 
-因此当重平衡时，
+# 与分形树（Fractal tree）的区别     
 
-
-
-
-
+分形树使用的buffer大小和扇出都是常数，为了更好适配磁盘。     
+分形树包含了许多额外的优化

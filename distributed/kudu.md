@@ -83,7 +83,15 @@ Bloom filer按4KB page分块，每个对应一小段key range，并使用B树所
 另外对于每个DiskRowSet，存储它的最小和最大的主键，使用区间树和key边界来索引DiskRowSet。
 
 
+## 4.9 Delta Compaction
+只compaction更新比较频繁的列，避免IO操作
 
+
+## 4.10 RowSet Compaction
+基于Key merge两个或多个DiskRowSets，输出新的DiskRowsets，也按32MB分卷，笔迷阿妈太大的DRS。
+Compaction的目的：
+- 可以有机会移除被删除的行
+- 减少DRS之间key range的重叠
 
 
 

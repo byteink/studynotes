@@ -15,12 +15,11 @@ sst文件格式：
   [meta block K]    
   [metaindex block]    
   [index block]    
-  [Footer]        (fixed size; starts at file_size - sizeof(Footer))    
+  [Footer] \(fixed size; starts at file_size - sizeof(Footer))    
   <end_of_file>
 
 data block：包含多个kv条目和一个block trailer    
-          每个datablock有个大小限制blockSize，超出开始写新的一个datablock    
-    
+          每个datablock有个大小限制blockSize，超出开始写新的一个datablock     
           数据部分：kv entries+restarts（包含restart len）    
           trailer：一字节type（加密类型）+四子节crc    
 

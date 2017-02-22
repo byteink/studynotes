@@ -43,8 +43,8 @@ level0是MemTable的dump，level0的key范围是有重叠的
 metaindex查找filter.<N>可以filter block的blockhandle    
 
 ### stat meta block：    
-     统计block    
+统计block    
 
 ## Manifest:    
-     存储各个层次的sst文件，和对应的key范围    
-     每次重新打开数据库时创建（新的文件名），    
+存储各个层次的sst文件，和对应的key范围    
+每次重新打开数据库时创建（新的文件名），    

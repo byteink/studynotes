@@ -44,13 +44,15 @@ EXPECT_CALL(turtle, GetX())
 int n = 100;
 EXPECT_CALL(turtle, GetX())
 .Times(4)
-.WillRepeatedly(Return(n++));     // return 100 always```
+.WillRepeatedly(Return(n++));     // return 100 always
+```
 
 - Using Multiple Expectations
 当一个mock方法被调用时，将会根据定义逆序搜索，如果找到参数匹配的就停止。
 
 - Ordered vs Unordered Calls
 默认匹配是无序的，强制有序
+
 ```cpp
 using ::testing::InSequence;...
 TEST(FooTest, DrawsLineSegment) {

@@ -7,6 +7,7 @@ memtable 内存存储的结构是一个支持并发的skiplist（读写锁）。
 
 skiplist的每个结点的数据为一条key-value记录，key的结构是：
 
+
 | key | seq | keyType |
 
 |----------|---------|--------|
@@ -26,6 +27,7 @@ skiplist的每个结点的数据为一条key-value记录，key的结构是：
 level0的SST文件是对memtable的dump操作。
 
 SST文件的结构如下：
+
 |  file begin | 
 
 |:----------|
@@ -64,9 +66,11 @@ SST文件的结构如下：
 
 每个KV entry的存储:
 
+
 | shared key len(varint)| not shared key len(varint) | value len(varint) |key|value|
 
 |----------|---------|--------|--------|--------|
+
 
  
 

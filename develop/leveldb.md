@@ -9,7 +9,6 @@ skiplist的每个结点的数据为一条key-value记录，key的结构是：
 
 
 | key | seq | keyType |
-
 |----------|---------|--------|
 
 
@@ -29,29 +28,17 @@ level0的SST文件是对memtable的dump操作。
 SST文件的结构如下：
 
 |  file begin | 
-
 |:----------|
-
 | data block 1 |
-
 | data block 2|
-
 |...   |
-
 | data block N |
-
 | meta block 1 |
-
 |...|
-
 | meta block K |
-
 | metaindex block|
-
 |index block|
-
 |footer|
-
 |**file end**|
 
 
@@ -68,7 +55,6 @@ SST文件的结构如下：
 
 
 | shared key len(varint)| not shared key len(varint) | value len(varint) |key|value|
-
 |----------|---------|--------|--------|--------|
 
 

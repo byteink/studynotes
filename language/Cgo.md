@@ -96,7 +96,6 @@ package main
 // int fortytwo() {
 //    return 42;
 // }
-
 import "C"
 import "fmt"
 

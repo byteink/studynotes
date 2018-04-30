@@ -161,6 +161,159 @@ Visual-Block mode下:
 `/`(search) 和 `<C-r>=`(expression register)也会进入这一模式。
 
 ### 28. Execute a Command on One or More Consecutive Lines
+#### 使用行号作为地址
+`:p`或者`:print` 打印当前行     
+`:1`跳到第一行    
+`:$`跳到文件尾     
+`:3p` 打印第三行    
+自然也可以后跟其他命令，比如`:3d` 删除第三行     
+#### 指定一个行范围
+`:2,5p` 打印2到5行，格式 :{start},{end}    
+`:%p` %号表示文件内所有行，等价于`:1,$p`  
+`:.,$p` .号表示当前行  
 
+#### 使用Visual Selection 指定行范围
+
+#### 使用模式匹配指定行范围    
+`/<html>/,/<\/html>/p`: 用模式匹配指定起始行和结束行。
+#### 使用Offset修改地址
+格式 :{address}+n，n可以忽略默认是1. {address}可以是行号、mark或者pattern，    
+例如：     
+`:/<html>/+1, /<\/html>/-1p`        
+`:.,.+3p` 打印当前行及其后的三行
+
+#### 用于指定地址和范围的符号总结
+`1` 第一行    
+`$` 最后一行    
+`0` 虚拟的，表示第一行之上    
+`.` 光标所在当前行     
+`,m` 包含 mark m 的行    
+`'<` visual selection 起始行    
+`'>` visual selection 结束号    
+`$` 所有行    
+
+我们制定的 [range] 都是连续的行，可以使用 :global 命令制定不连续的行。
+   
+### 29. Duplicate or Move Lines Using ':t' and ‘:m' Commands
+`:t`是`:copy`的缩写形式    
+`:m`是`:move`的缩写形式      
+
+   
+`:6copy.`：把第6行拷贝到当前行。  
+`:t$`: 拷贝当前行到文件尾，不指定前面的 [range] 表示是拷贝当前行。     
+`'<,'>t0`：visual mode下选中的行拷贝到文件首   
+         
+copy不会像 yank 命令占用 register。    
+  
+`'<,'>m$`移动到文件尾。     
+     
+`@:` 重复上一次 ex command。
+
+### 30. Run Normal Mode Commands Across a Range
+`:'<,'>normal .` 对选中行重放上次修改操作    
+`:%normal A;` 在所有行尾添加 ; 号    
+`:%normal i//` 在所有行首添加 // (注释）
+
+这对同时修改多行非常有用！
+
+### 31. Repeat the Last Ex Command
+`.`命令不能重放Command line命令的修改，需要使用`@:`    
+最常用的比如重放`:bn[ext]`或者`:bp[revious]`。      
+
+这跟重放宏是类似的，`:`是个特殊的register，保存最近执行的command line命令。    
+运行一次`@:`后，后续可以使用`@@`来重放。   
+
+### 32. Tab-Complete Your Ex Commands
+可以使用`<Tab>`键来补全 Ex Command。    
+`<C-d>`：显示可能的补全   
+`<Tab>`：选中下一个候选补全    
+`<S-Tab>`：选中上一个候选补全     
+    
+我们也可以对我们自定义的Ex Command进行补全行为。    
+
+#### 从多个匹配中挑选
+wildmode 配置可以定制补全模式。    
+bash shell 一般配置为：   
+       
+```sh
+set wildmode=longest,list
+```  
+        
+如果你习惯zsh提供的autocomplete menu，可以用下面的配置：     
+     
+```sh
+set wildmenu              
+set wildmode=full
+```       
+   
+当 wildmenu 启用后，可以使用`<Tab>`,`<C-n>`,`<Right>`键选择下一个；    
+使用`<S-Tab>`,`<C-p>`,`<Left>`选择上一个。
+
+### 33. Insert the Current Word at the Command Prompt
+`<C-r><C-w>`：拷贝光标下的word插入到 command-line。    
+### 34. ReCall Commands from History
+按下`:`键切换到Command-Line mode后，使用`<Up>`和`<Down>`可以翻阅历史命令。    
+如果我们输入`:help`, 再使用`<Up>`或`<Down>`翻阅的只是以 help 开头的历史命令。      
+
+默认只保存20条历史命令，可以`set history=200`来配置。    
+另外这个历史保存不只是当前会话的，而是会持久化，退出再重启后也还会在。   
+
+vim也会保存 search 历史，输入`/`来翻阅它。    
+
+#### Command-Line Window
+command-line window很像一个普通的vim buffer。每行一个历史条目。    
+输入`q:`命令可以打开command-line window。    
+使用`k`和`j`可以在历史条目中上下移动。按下`<CR>`回车键会执行当前历史。   
+使用`:q`可以关闭它。      
+    
+我们还可以编辑修改历史命令。    
+可以在Normal-mode下跳转，在visual-mode下操作或者切换到insert-mode。    
+设置还可以对这些历史执行 Ex commands。   
+
+`q/` 打开search历史的command-line window         
+`<C-f>` 从 Command-Line mode 转换到 command-line window    
+
+### 35. Run Commands in the Shell
+command-line mode下前面加上 ! 号来执行外部 shell 命令。     
+`:!echo %`：% 号代表当前文件名。      
+        
+`:shell`： 打开一个交互 shell 会话。退出后返回vim。     
+
+#### 使用vim buffer 作为外部命令的标准输入或输出
+`:read !{cmd}`：将 {cmd} 的输出写入当前buffer。     
+`:write !{cmd}`：将当前buffer的内容作为命令的标准输入。      
+`:[range]write !{cmd}`：指定作为标准输入的文本范围。      
+注意与`:wirte!`的区别：    
+`:write! sh`：把当前buffer覆盖写入一个名为 sh 的文件里。
+
+#### 通过外部命令过滤 buffer 里的内容
+`:!{cmd}`可以指定一个范围 [range]，`:[range]!{cmd}`        
+这时 [range] 内的文本将会作为 {cmd} 的标准输入，   
+并且命令的输入会替换 [range] 内的文本。  
+        
+这可以实现将vim里的文本通过外部程序处理修改后再写回。     
+例如 `:2,$!sort -t',' -k2`：按第二列排序文本。     
+
+`!{motion}`操作符可以切换到Command-Line mode并且提前计算好 motion 对应的 [range]。      
+例如`!ap`，`!2j`。    
+
+
+### 36. Run Multiple Ex Commands as a Batch
+可以把多条Ex commands写入到一个文件内，比如 batch.vim     
+然后使用`:source batch.vim`来批量执行。   
+文件内的每一行都将当作一条 Ex command 来执行。  
+
+#### 更改多个文件
+`argdo source batch.vim`：对argument list里每个文件执行批量操作。
+
+## Chapter 6 Manage Multiple Files
+### 37. Track Open Files with the Buffer List
+
+### 38. Group Buffers into a Collection with the Argument List
+### 39. Manage Hidde Files
+### 40. Divide Your Workspace into Split Windows
+### 41. Organize Your Window Layouts with Tab Pages
+
+## Chapter 7 Open Files and Save Them to Disk
 
 

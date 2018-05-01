@@ -304,15 +304,136 @@ command-line mode下前面加上 ! 号来执行外部 shell 命令。
 文件内的每一行都将当作一条 Ex command 来执行。  
 
 #### 更改多个文件
-`argdo source batch.vim`：对argument list里每个文件执行批量操作。
+`:argdo source batch.vim`：对argument list里每个文件执行批量操作。
 
 ## Chapter 6 Manage Multiple Files
-### 37. Track Open Files with the Buffer List
 
+### 37. Track Open Files with the Buffer List
+#### 理解 Files 和 Buffers 的区别
+文件 Files 保存在磁盘，我们编辑的是文件在内存中的展示，即 vim 术语中的  buffer。    
+当我们在 vim 中打开一个时，它的内容就会被读进 buffer 中。   
+我们也可以使用`:write`，`:update`，`:saveas`等命令把 buffer 写回文件。     
+#### Buffer List
+vim允许我们同时处理多个 buffers。例如 `vim *.txt`。
+       
+`:ls` 可以列出被 load 到内存里的所有 buffres。     
+% 号表示当前buffer， # 号表示候选文件。我们可以使用`<C-^>`在两者间切换。    
+同时每个buffer都有一个编号，用于快速跳转。   
+           
+`:bnext` 表示切换到下一个buffer。       
+`:bprev` 切换到上一个buffer。    
+`:bfirst` 切换到第一个。     
+`:blast` 切换到最后一个。   
+    
+`:buffer {N}` 快速跳转到标号为 N 的buffer。     
+`:buffer {bufname}` 快速跳转到某个文件名对应的buffer。bufname不需要全部，可以惟一定位的前缀即可。     
+
+推荐使用 unimpaired.vim 插件来映射快捷键，保持跟 vim `[`系列命令的一致。    
+   
+
+`:budo` 对 `:ls` 列出的所有buffer 执行 Ex command。    
+           
+#### 删除 Buffers
+`:bdelete N1 N2 N3`：删除标号为1，2，3的buffer   
+`:N,M bdelete`： 删除编号从 N 到 M 的buffer     
+删除一个buffer 对它关联的文件没有影响，只是移动内存中的表示。   
+
+vim内置对 buffer list的控制缺乏灵活性。   
+更好的选择是使用 split windows， tab pages 或者 argument list。     
+          
 ### 38. Group Buffers into a Collection with the Argument List
+argument list更容易管理，很方便地把某个文件集合组织在一起来快速跳转。    
+我们也可以使用`:argdo`来对 argument list中的每一项执行 Ex command。     
+     
+`:args` 类似`:ls`，列举当前 argument list    
+argument list初始时代表了运行 vim 时传递的文件列表参数。    
+但是我们也可以更改 argument list，它可以不仅仅是运行传递的参数列表。     
+#### 设置 argument list
+`:args {arglist}` 设置 argument list 的内容。    
+{arglist} 可以是文件名、通配符 wildcard 甚至可以是 shell 命令的输出     
+    
+`*`号匹配0个或多个字符，但是只能在一个特定的目录范围内。   
+`**`通配符也是匹配0或多个字符，但是可以递归下级目录。     
+{arglist}也可以是多个 glob。      
+      
+#### 使用 backtick-expansion 指定文件
+```:args `cat .chapters` ``` 在 shell 中执行 cat 命令，并把 argument list 内容设置为 cat 的输出。      
+    
+这一特性不是在所有系统上都是可用的。    
+具体可以参考`:help backtick-expansion`
+
+#### 使用 argument list
+可以使用`:next`和`:prev`来遍历列表中的文件。    
+`:first`和`:last`来跳转到第一个或最后一个文件。    
+使用`:argdo`来对集合中的每个buffer执行相同的 Ex command。    
+
 ### 39. Manage Hidde Files
+当一个 buffer 被修改后，vim 会对它特殊对待，以防我们没保存就退出了。     
+
+已修改未保存的buffer，在`:ls`的输出中会有一个 + 号的标记。  
+        
+`:bnext!` 强制切换到下个 buffer，忽视当前buffer未保存修改的错误。   
+`:write` 保存修改。  
+`:edit!` 丢弃修改（重新加载源文件编辑）。  
+`:qa[ll]!` 丢弃修改，强制关闭所有窗口  
+`:wall` 保存所有buffer。     
+`:wn` 保存当前文件并开始编辑下一个文件。 
+
+#### Enable hidden Setting Before Running ':*do' Commands
+默认vim阻止我们离开一个已修改的 buffer。   
+设置 hidden 配置，可以离开一个已修改的 buffer 而不会触发警告。     
+
+
 ### 40. Divide Your Workspace into Split Windows
+`<C-w>s` ： 水平切分等高窗口，新窗口重用当前buffer。       
+`<C-w>v` ： 垂直切分等宽窗口，新窗口重用当前buffer。     
+`:sp[lit] {file}`  水平切分，并且加载 {file}       
+`:vsp[lit] {file}` 垂直切分，并且加载 {file}      
+
+#### 更改焦点窗口
+`<C-w>w` 循环跳转打开的窗口。    
+`<C-w>h` 移到左边的窗口。   
+`<C-w>j` 移到下边的窗口。  
+`<C-w>k` 移到上边的窗口。    
+`<C-w>l` 移到右边的窗口。 
+   
+#### 关闭窗口
+`:clo[se]` `<C-w>c` 关闭当前窗口。    
+`:on[ly]` `<C-w>o` 只保持当前窗口，关闭其他窗口。    
+
+#### Resize 和 Rearranging windows
+完整resize键盘映射 `:help window-resize`.     
+`<C-w>=`把所有窗口设为等宽等高。    
+`<C-w>_` 把当前窗口设为最大高度。    
+`<C-w>|` 把当前窗口设为最大宽度       
+`[N]<C-w>_` 把当前窗口高度设为 [N] 行。     
+`[N]<C-w>|` 把当前窗口宽度设为 [N] 列。    
+
 ### 41. Organize Your Window Layouts with Tab Pages
+Vim 的标签页可以用来分割任务到不同的 workspaces。          
+
+`:lcd {path}` 为当前窗口设置工作目录，只在当前窗口生效。    
+`:windo lcd {path}` 为当前标签页所有窗口设置工作目录。    
+
+#### 打开和关闭标签页
+`:tabe[dit] {filename}` 打开文件到新标签页。   
+`<C-w>T` 移动当前窗口到它自己的标签。   
+`:tabc[lose]` 关闭当前标签和它所有的窗口     
+`:tabo[only]` 保持当前标签，关闭其他所有标签。    
+
+#### 在标签间切换
+标签页从 1 开始编号。     
+`{N}gt`         
+`:tabn[ext] {N}` 切换到标签 {N}，如果不带数字将会切换到下一个标签。    
+    
+`gt`    
+`:tabn[ext]` 切换到下一个标签    
+    
+`gT`    
+`:tabp[revious]` 切换到上一个标  
+
+#### 移动标签  
+ `:tabmove [N]` 将标签移动到第 [N] 个位置。 0 表示移动到最前面。      
 
 ## Chapter 7 Open Files and Save Them to Disk
 
